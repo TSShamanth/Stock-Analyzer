@@ -20,7 +20,12 @@ def get_nifty_500_symbols():
         response = requests.get(url, headers=headers)
         from io import StringIO
         df = pd.read_csv(StringIO(response.text))
-        return df['Symbol'].tolist()
+        
+        # Filter: Remove any symbols that are empty or contain 'DUMMY'
+        symbols = df['Symbol'].dropna().tolist()
+        clean_symbols = [s.strip() for s in symbols if "DUMMY" not in str(s).upper()]
+        
+        return clean_symbols
     except Exception as e:
         print(f"⚠️ Error fetching Nifty 500 list: {e}")
         return ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY"]
@@ -85,12 +90,14 @@ def analyze_stock(symbol):
 def send_telegram_msg(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
-    requests.post(url, json=payload)
+    response = requests.post(url, json=payload)
+    print(f"Telegram Msg Status: {response.status_code}, Response: {response.text}")
 
 def send_telegram_file(file_path):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
     with open(file_path, "rb") as f:
-        requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID}, files={"document": f})
+        response = requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID}, files={"document": f})
+        print(f"Telegram File Status: {response.status_code}, Response: {response.text}")
 
 def main():
     print("🚀 Starting Daily Scan (Nifty 500)...")
