@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Nifty 500 Screener</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:       #080c12;
+    --surface:  #0e1420;
+    --card:     #121a28;
+    --border:   #1e2d45;
+    --buy:      #00e5a0;
+    --buy-dim:  #00e5a020;
+    --short:    #ff4d6d;
+    --short-dim:#ff4d6d20;
+    --neutral:  #4a90d9;
+    --text:     #e8edf5;
+    --muted:    #5a7099;
+    --accent:   #f0c040;
+    --font-display: 'Syne', sans-serif;
+    --font-mono:    'Space Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-display);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  /* ── HEADER ─────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+  }
+
+  .logo-text {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .last-scan {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* ── LAYOUT ─────────────────────────── */
+  .main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* ── HERO / STATS BAR ───────────────── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stat-card.buy-card::before { background: var(--buy); }
+  .stat-card.short-card::before { background: var(--short); }
+  .stat-card.scan-card::before { background: var(--accent); }
+  .stat-card.total-card::before { background: var(--neutral); }
+
+  .stat-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .stat-value.buy  { color: var(--buy); }
+  .stat-value.short { color: var(--short); }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.neutral { color: var(--neutral); }
+
+  /* ── CONTROLS ───────────────────────── */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #080c12;
+  }
+  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover { border-color: var(--muted); background: var(--card); }
+
+  .btn-export {
+    background: #132a1a;
+    color: var(--buy);
+    border: 1px solid var(--buy);
+  }
+  .btn-export:hover { background: var(--buy-dim); }
+  .btn-export:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .filter-tabs {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  .tab {
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .tab.active-all    { background: var(--card); color: var(--text); border-color: var(--neutral); }
+  .tab.active-buy    { background: var(--buy-dim); color: var(--buy); border-color: var(--buy); }
+  .tab.active-short  { background: var(--short-dim); color: var(--short); border-color: var(--short); }
+  .tab:hover:not(.active-all):not(.active-buy):not(.active-short) {
+    color: var(--text); border-color: var(--muted);
+  }
+
+  /* ── PROGRESS BAR ───────────────────── */
+  .progress-wrap {
+    display: none;
+    margin-bottom: 20px;
+  }
+  .progress-wrap.visible { display: block; }
+
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .progress-bar-bg {
+    background: var(--border);
+    height: 4px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--buy));
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  /* ── RESULTS TABLE ──────────────────── */
+  .results-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .results-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody tr:last-child { border-bottom: none; }
+
+  td {
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    vertical-align: middle;
+  }
+
+  .symbol-cell {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.92rem;
+    letter-spacing: 0.5px;
+  }
+
+  .signal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .signal-badge.BUY   { background: var(--buy-dim);   color: var(--buy);   border: 1px solid var(--buy); }
+  .signal-badge.SHORT { background: var(--short-dim); color: var(--short); border: 1px solid var(--short); }
+
+  .badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+  .BUY .badge-dot   { background: var(--buy); }
+  .SHORT .badge-dot { background: var(--short); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(1.3); }
+  }
+
+  .mono { font-family: var(--font-mono); font-size: 0.82rem; }
+
+  .rsi-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .rsi-mini-bar {
+    width: 70px; height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .rsi-fill {
+    height: 100%;
+    border-radius: 4px;
+    position: absolute;
+    left: 0;
+  }
+  .rsi-val { font-family: var(--font-mono); font-size: 0.82rem; }
+
+  .trend-up   { color: var(--buy); }
+  .trend-down { color: var(--short); }
+
+  .candle-green { color: var(--buy); }
+  .candle-red   { color: var(--short); }
+
+  .dist-pos { color: var(--buy); }
+  .dist-neg { color: var(--short); }
+
+  .reason-cell {
+    font-size: 0.78rem;
+    color: var(--muted);
+    max-width: 260px;
+  }
+
+  .tv-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: #1a2a3a;
+    color: var(--neutral);
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: background 0.2s;
+  }
+  .tv-link:hover { background: #1e3548; }
+
+  /* ── EMPTY STATE ────────────────────── */
+  .empty-state {
+    padding: 80px 24px;
+    text-align: center;
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 16px; }
+  .empty-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+  .empty-sub   { color: var(--muted); font-size: 0.88rem; }
+
+  /* ── SCANNING STATE ─────────────────── */
+  .scanning-row td {
+    text-align: center;
+    padding: 60px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 28px; height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── TICKER SCROLL ──────────────────── */
+  .ticker-wrap {
+    overflow: hidden;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 8px 0;
+    margin-bottom: 28px;
+    position: relative;
+  }
+  .ticker-track {
+    display: flex;
+    gap: 40px;
+    animation: ticker 40s linear infinite;
+    white-space: nowrap;
+    width: max-content;
+  }
+  @keyframes ticker {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .ticker-item {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .ticker-item .up   { color: var(--buy); }
+  .ticker-item .down { color: var(--short); }
+
+  /* ── FOOTER ─────────────────────────── */
+  footer {
+    text-align: center;
+    padding: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    margin-top: 40px;
+  }
+
+  /* ── RESPONSIVE ─────────────────────── */
+  @media (max-width: 768px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .filter-tabs { margin-left: 0; }
+    header { padding: 14px 16px; }
+    .main { padding: 16px; }
+    th:nth-child(n+6), td:nth-child(n+6) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">📈</div>
+    <div class="logo-text">Nifty<span>500</span> Screener</div>
+  </div>
+  <div class="header-right">
+    <div class="last-scan" id="lastScanLabel">Last scan: —</div>
+  </div>
+</header>
+
+<!-- ── TICKER ──────────────────────────── -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="tickerTrack">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<!-- ── MAIN ────────────────────────────── -->
+<div class="main">
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card scan-card">
+      <div class="stat-label">Stocks Scanned</div>
+      <div class="stat-value accent" id="statScanned">—</div>
+    </div>
+    <div class="stat-card buy-card">
+      <div class="stat-label">Buy Signals</div>
+      <div class="stat-value buy" id="statBuy">—</div>
+    </div>
+    <div class="stat-card short-card">
+      <div class="stat-label">Short Signals</div>
+      <div class="stat-value short" id="statShort">—</div>
+    </div>
+    <div class="stat-card total-card">
+      <div class="stat-label">Total Signals</div>
+      <div class="stat-value neutral" id="statTotal">—</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn btn-primary" id="btnScan" onclick="startScan()">
+      ⚡ Run Analysis
+    </button>
+    <button class="btn btn-export" id="btnExport" onclick="exportCSV()" disabled>
+      ⬇ Export CSV
+    </button>
+    <div class="filter-tabs">
+      <button class="tab active-all" onclick="setFilter('ALL', this)">All</button>
+      <button class="tab" onclick="setFilter('BUY', this)">🟢 Buy</button>
+      <button class="tab" onclick="setFilter('SHORT', this)">🔴 Short</button>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-info">
+      <span id="progressLabel">Scanning stocks…</span>
+      <span id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Results Table -->
+  <div class="results-wrap">
+    <div class="results-header">
+      <div class="results-title" id="resultsTitle">Watchlist — Ready to Scan</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Symbol</th>
+          <th>Signal</th>
+          <th>Close ₹</th>
+          <th>44 SMA ₹</th>
+          <th>RSI</th>
+          <th>Trend</th>
+          <th>Candle</th>
+          <th>SMA Dist.</th>
+          <th>Reason</th>
+          <th>Chart</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody">
+        <tr>
+          <td colspan="11">
+            <div class="empty-state">
+              <div class="empty-icon">🔍</div>
+              <div class="empty-title">Ready to scan</div>
+              <div class="empty-sub">Click "Run Analysis" to screen all Nifty 500 stocks using your 44 SMA + RSI strategy</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ── FOOTER ───────────────────────────── -->
+<footer>
+  Strategy: 44 SMA (15-min) · RSI 14 · Buy &lt;30 · Overbought &gt;70 &nbsp;|&nbsp; For educational purposes only. Not financial advice.
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+let allResults   = [];
+let currentFilter = "ALL";
+let pollTimer    = null;
+
+// ─────────────────────────────────────────────
+// Ticker setup (Live Data)
+// ─────────────────────────────────────────────
+async function buildTicker() {
+  const track = document.getElementById("tickerTrack");
+  try {
+    const r = await fetch("/api/ticker");
+    const liveData = await r.json();
+    
+    // Fallback if API fails or is empty
+    const data = liveData.length ? liveData : [["NETWORK ERROR","—","0.00%","up"]];
+    
+    // Duplicate for seamless loop
+    const all = [...data, ...data];
+    track.innerHTML = all.map(([sym, price, chg, dir]) =>
+      `<span class="ticker-item">${sym} <span class="${dir === 'up' ? 'up' : 'down'}">₹${price} ${chg}</span></span>`
+    ).join("");
+  } catch (e) {
+    console.error("Ticker fetch error", e);
+  }
+}
+buildTicker();
+setInterval(buildTicker, 60000); // Refresh live prices every minute
+
+// ─────────────────────────────────────────────
+// Scan
+// ─────────────────────────────────────────────
+async function startScan() {
+  const btn = document.getElementById("btnScan");
+  btn.disabled = true;
+  btn.textContent = "⏳ Scanning…";
+  document.getElementById("btnExport").disabled = true;
+
+  allResults = [];
+  renderTable([]);
+  document.getElementById("progressWrap").classList.add("visible");
+  document.getElementById("resultsTitle").textContent = "Scanning Nifty 500 stocks…";
+
+  try {
+    await fetch("/api/scan/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    pollTimer = setInterval(pollStatus, 800);
+  } catch(e) {
+    alert("Could not start scan. Is the server running?");
+    resetUI();
+  }
+}
+
+async function pollStatus() {
+  try {
+    const r = await fetch("/api/scan/status");
+    const data = await r.json();
+    updateProgress(data);
+
+    if (!data.running) {
+      clearInterval(pollTimer);
+      const res = await fetch("/api/scan/results");
+      const finalData = await res.json();
+      allResults = finalData.results || [];
+      finishScan(finalData);
+    }
+  } catch(e) {
+    clearInterval(pollTimer);
+    resetUI();
+  }
+}
+
+function updateProgress(data) {
+  const pct = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
+  document.getElementById("progressFill").style.width = pct + "%";
+  document.getElementById("progressPct").textContent   = pct + "%";
+  document.getElementById("progressLabel").textContent =
+    `Scanning ${data.current_stock || "…"} (${data.progress}/${data.total})`;
+}
+
+function finishScan(data) {
+  const results = data.results || [];
+  allResults = results;
+
+  const buy   = results.filter(r => r.signal === "BUY").length;
+  const short = results.filter(r => r.signal === "SHORT").length;
+
+  document.getElementById("statScanned").textContent = data.total_signals >= 0 ? "500" : "—";
+  document.getElementById("statBuy").textContent     = buy;
+  document.getElementById("statShort").textContent   = short;
+  document.getElementById("statTotal").textContent   = results.length;
+  document.getElementById("lastScanLabel").textContent = "Last scan: " + (data.last_scan || "just now");
+
+  document.getElementById("progressWrap").classList.remove("visible");
+  document.getElementById("btnExport").disabled = results.length === 0;
+  document.getElementById("resultsTitle").textContent = `Watchlist — ${results.length} Signal${results.length !== 1 ? "s" : ""} Found`;
+
+  renderTable(filtered(results));
+  resetUI();
+}
+
+function resetUI() {
+  const btn = document.getElementById("btnScan");
+  btn.disabled = false;
+  btn.innerHTML = "⚡ Run Analysis";
+}
+
+// ─────────────────────────────────────────────
+// Filter
+// ─────────────────────────────────────────────
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll(".tab").forEach(t => {
+    t.classList.remove("active-all","active-buy","active-short");
+  });
+  if (f === "ALL")   el.classList.add("active-all");
+  if (f === "BUY")   el.classList.add("active-buy");
+  if (f === "SHORT") el.classList.add("active-short");
+  renderTable(filtered(allResults));
+}
+
+function filtered(arr) {
+  if (currentFilter === "ALL") return arr;
+  return arr.filter(r => r.signal === currentFilter);
+}
+
+// ─────────────────────────────────────────────
+// Render
+// ─────────────────────────────────────────────
+function rsiColor(v) {
+  if (v <= 30) return "#00e5a0";
+  if (v >= 70) return "#ff4d6d";
+  return "#4a90d9";
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById("resultsBody");
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="11">
+      <div class="empty-state">
+        <div class="empty-icon">${allResults.length > 0 ? "🔎" : "🔍"}</div>
+        <div class="empty-title">${allResults.length > 0 ? "No signals for this filter" : "Ready to scan"}</div>
+        <div class="empty-sub">${allResults.length > 0 ? "Try switching to All signals" : 'Click "Run Analysis" to begin'}</div>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const rsiPct  = Math.min(100, Math.max(0, r.rsi));
+    const distCls = r.sma_dist_pct >= 0 ? "dist-pos" : "dist-neg";
+    const distSign = r.sma_dist_pct >= 0 ? "+" : "";
+    const reasons = (r.reasons || []).join(" · ") || "—";
+    const tvLink  = `https://www.tradingview.com/chart/?symbol=NSE:${r.symbol}&interval=15`;
+
+    return `
+    <tr>
+      <td class="mono" style="color:var(--muted)">${i+1}</td>
+      <td><span class="symbol-cell">${r.symbol}</span></td>
+      <td>
+        <span class="signal-badge ${r.signal}">
+          <span class="badge-dot"></span>
+          ${r.signal}
+        </span>
+      </td>
+      <td class="mono">₹${r.close.toLocaleString("en-IN")}</td>
+      <td class="mono" style="color:var(--muted)">₹${r.sma44.toLocaleString("en-IN")}</td>
+      <td>
+        <div class="rsi-bar-wrap">
+          <div class="rsi-mini-bar">
+            <div class="rsi-fill" style="width:${rsiPct}%;background:${rsiColor(r.rsi)}"></div>
+          </div>
+          <span class="rsi-val" style="color:${rsiColor(r.rsi)}">${r.rsi}</span>
+        </div>
+      </td>
+      <td class="${r.trend === "UPWARD" ? "trend-up" : "trend-down"}">
+        ${r.trend === "UPWARD" ? "▲ Up" : "▼ Down"}
+      </td>
+      <td class="${r.candle === "GREEN" ? "candle-green" : "candle-red"}">
+        ${r.candle === "GREEN" ? "🟢 Green" : r.candle === "RED" ? "🔴 Red" : "⬜ Doji"}
+      </td>
+      <td class="mono ${distCls}">${distSign}${r.sma_dist_pct}%</td>
+      <td class="reason-cell">${reasons}</td>
+      <td>
+        <a class="tv-link" href="${tvLink}" target="_blank">📊 Chart</a>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+// ─────────────────────────────────────────────
+// Export
+// ─────────────────────────────────────────────
+function exportCSV() {
+  window.open("/api/export/csv", "_blank");
+}
+</script>
+</body>
+</html>
