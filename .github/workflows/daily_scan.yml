@@ -27,4 +27,13 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python stock_analyzer/scanner.py
+        run: |
+          if [ -f "stock_analyzer/scanner.py" ]; then
+            python stock_analyzer/scanner.py
+          elif [ -f "scanner.py" ]; then
+            python scanner.py
+          else
+            echo "❌ Error: scanner.py not found in stock_analyzer/ or root!"
+            ls -R
+            exit 1
+          fi
