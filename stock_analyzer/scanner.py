@@ -88,8 +88,13 @@ def analyze_stock(symbol):
     return None
 
 def send_telegram_msg(message):
+    # Debug: Print masked token to verify it's loaded correctly
+    masked_token = f"{TELEGRAM_BOT_TOKEN[:5]}...{TELEGRAM_BOT_TOKEN[-5:]}" if TELEGRAM_BOT_TOKEN else "MISSING"
+    print(f"Debug: Using Token: {masked_token}")
+    
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
+    
     response = requests.post(url, json=payload)
     print(f"Telegram Msg Status: {response.status_code}, Response: {response.text}")
 
